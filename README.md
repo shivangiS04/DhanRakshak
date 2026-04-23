@@ -1,5 +1,5 @@
 # AML Mule Account Detection
-**Team LAAPATALADIES | National Fraud Prevention Challenge | IIT Delhi × Reserve Bank Innovation Hub**
+**IIT Delhi × Reserve Bank Innovation Hub**
 
 ---
 
