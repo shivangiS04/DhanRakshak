@@ -1,203 +1,300 @@
-# Mule Account Detection for AML Systems
+# AML Mule Account Detection
+**Team LAAPATALADIES | National Fraud Prevention Challenge | IIT Delhi × Reserve Bank Innovation Hub**
 
-A machine learning solution for detecting mule accounts (money laundering intermediaries) in banking transaction data.
+---
 
-## Quick Start
+## Final Results
 
-### Installation
+| Metric | Public | Private |
+|--------|--------|---------|
+| AUC-ROC | 0.9773 | 0.9671 |
+| F1 Score | 0.5879 | 0.5090 |
+| Temporal IoU | 0.6850 | 0.6181 |
+| RH Avoidance Avg (1–6) | — | 0.9456 |
+| RH_7 (Account Takeover) | — | 0.1429 |
 
+**Best submission:** `output_v21_fast_advanced/submission_v21_wide_windows.csv`
+
+---
+
+## How to Run
+
+### 1. Install dependencies
 ```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-### Generate Predictions
-
+### 2. Stage 1 — Train ensemble & generate predictions
 ```bash
-# Generate improved submission
-python generate_improved_submission.py
-
-# Output: output/submission_improved.csv
+python v3/generate_submission_v21_fast_advanced.py
 ```
+Output: `output_v21_fast_advanced/submission_v21_fast_advanced.csv`
 
-### Run Tests
-
+### 3. Stage 2 — Replace windows with full transaction history spans
 ```bash
-pip install -r requirements-test.txt
-pytest tests/
+python wide_window_attempt.py
+```
+Output: `output_v21_fast_advanced/submission_v21_wide_windows.csv` ✅ **(FINAL)**
+
+### Optional — F1 calibration post-processing
+```bash
+python f1_calibration_postprocessor.py
+```
+Output: `output_v21_fast_advanced/submission_v21_f1_optimized.csv`
+
+---
+
+## Data Requirements
+
+| File | Description |
+|------|-------------|
+| `output/mega_transaction_features.csv` | 160K accounts, 42 features (pre-extracted) |
+| `/archive/train_labels.parquet` | Training labels (96,091 accounts) |
+| `/archive/test_accounts.parquet` | Test account IDs (64,062 accounts) |
+| `/archive/transactions/batch-{1-4}/part_*.parquet` | Raw transactions (~8 GB, 400M rows) |
+
+---
+
+## Solution Architecture
+
+### Pipeline Overview
+```
+Raw Transactions (400M rows, ~8 GB)
+    ↓
+Stream Feature Extraction (batch-wise, constant memory)
+    ↓
+12 Base Features + 30+ Derived Features = 42 Total
+    ↓
+4-Model Ensemble (XGBoost + ExtraTrees + GradientBoosting + Neural Network)
+    ↓
+AUC-Weighted Probability Combination
+    ↓
+Isotonic Regression Calibration (probability decompression)
+    ↓
+Wide Window Strategy (full transaction history span)
+    ↓
+submission_v21_wide_windows.csv
 ```
 
-## Project Overview
+---
 
-- **Status**: ✓ Complete and Optimized
-- **Performance**: AUC 0.8724 (74.48% improvement from baseline)
-- **Training Data**: 96,091 accounts (97.2% non-mule, 2.8% mule)
-- **Test Data**: 64,062 accounts
-- **Models**: 3-model ensemble (XGBoost, Random Forest, Logistic Regression)
+## Feature Engineering
 
-## Key Results
+### 12 Base Features (Regulatory-Grounded)
 
-| Metric | Value |
-|--------|-------|
-| AUC-ROC | 0.8724 |
-| F1 Score | 0.5423 |
-| Precision | 0.6242 |
-| Recall | 0.4794 |
-| Optimal Threshold | 0.80 |
+| Feature | Signal | Regulatory Basis |
+|---------|--------|-----------------|
+| `structuring_ratio` | Transactions in ₹9,000–₹9,999 band | PMLA 2002 / RBI ₹10k threshold |
+| `round_ratio` | Round-amount transactions | Suspicious pattern |
+| `transaction_flow_anomaly` | \|credit − debit\| / (credit + debit) | FATF pass-through typology |
+| `credit_concentration` | Herfindahl index of credit sources | Few repeated sources |
+| `debit_concentration` | Herfindahl index of debit targets | Few repeated destinations |
+| `counterparty_diversity` | Unique counterparties / total txns | Limited network breadth |
+| `total_credit_amount` | Sum of incoming money | Absolute flow magnitude |
+| `total_debit_amount` | Sum of outgoing money | Absolute flow magnitude |
+| `avg_credit_amount` | Average incoming transaction | Per-transaction average |
+| `avg_debit_amount` | Average outgoing transaction | Per-transaction average |
+| `transaction_span_days` | Last txn − First txn | Short burst pattern |
+| `total_transactions` | Raw activity level | Volume indicator |
 
-## Submission Format
+### 30+ Derived Features
+- `structuring_round` = `structuring_ratio` × `round_ratio` (strongest single indicator)
+- `pass_through_ratio` = `total_credit` / `total_debit` (values 0.95–1.05 = pass-through)
+- `flow_anomaly_ratio` = `transaction_flow_anomaly` / `counterparty_diversity`
+- Log transforms on all volume features
+- Squared terms on transaction counts and amounts
+- Interaction products: `flow_span`, `diversity_span`, `structuring_span`
 
-```csv
-account_id,is_mule,suspicious_start,suspicious_end
-ACCT_000005,0.1081,,
-ACCT_000068,0.7080,2025-04-01T00:00:00,2025-06-30T00:00:00
+### Graph Network Features
+Computed from directed transaction network (160K nodes):
+- **Degree centrality** — hub account identification
+- **PageRank** (α=0.85, 100 iterations) — flow concentration
+- **Betweenness centrality** (k=500 approximation) — critical path detection
+- **Clustering coefficient** — local network density
+- **Community detection** (greedy modularity) — suspicious cluster isolation
+- **Community cycling score** — bidirectional edge fraction within community
+
+---
+
+## Ensemble Architecture
+
+| Model | Parameters | Val AUC | Role |
+|-------|-----------|---------|------|
+| XGBoost | n_est=500, depth=8, lr=0.04, scale_pos_weight=60 | 0.9061 | Primary detector |
+| ExtraTrees | n_est=400, depth=16, class_weight=balanced | 0.8993 | Diversity via random splits |
+| GradientBoosting | n_est=300, depth=6, lr=0.05, subsample=0.75 | 0.9080 | Sequential refinement |
+| Neural Network | 512→256→128, ReLU, Adam, early stopping | 0.9112 | Smooth non-linear boundaries |
+
+**Combination:** `p_ensemble = Σ (auc_i / Σauc) × p_i`
+
+### Class Imbalance Handling (2.8% mule rate)
+- `scale_pos_weight=60` in XGBoost
+- `class_weight='balanced'` in ExtraTrees and GradientBoosting
+- Stratified 80/20 train/val split preserving mule rate
+
+---
+
+## Probability Calibration
+
+Ensemble averaging compresses probabilities toward 0.5, limiting F1 threshold sweep effectiveness.
+
+**Solution — Isotonic Regression Calibration:**
+```python
+from sklearn.calibration import IsotonicRegression
+
+isotonic = IsotonicRegression(out_of_bounds='clip')
+isotonic.fit(ensemble_pred_val, y_val)
+calibrated_pred = isotonic.predict(ensemble_pred_test)
 ```
 
-- **is_mule**: Probability score (0.0-1.0)
-- **suspicious_start**: Start of suspicious activity window (ISO format)
-- **suspicious_end**: End of suspicious activity window (ISO format)
+**Power-transform stretching (p^0.5):**
+```python
+stretched = probs ** 0.5
+stretched = (stretched - stretched.min()) / (stretched.max() - stretched.min())
+```
 
-## Risk Distribution
+**Impact:** F1 0.5090 → 0.54–0.58 | AUC unchanged (monotonic transform)
 
-- **High-Risk (>0.80)**: 427 accounts (0.67%)
-- **Medium-Risk (0.50-0.80)**: 3,750 accounts (5.85%)
-- **Low-Risk (<0.50)**: 59,885 accounts (93.48%)
+---
 
-## Architecture
+## Temporal Window Detection — Wide Window Strategy
 
-### Features (19 total)
-- Balance features (avg, monthly, daily)
-- Account status (frozen, history, age)
-- KYC compliance (status, days since)
-- Mobile banking (updates, days since)
-- Cheque features (allowed, availed, count)
-- Account type (savings, k-family, overdraft)
-- Label signal (composite behavioral signal)
+### Problem
+Ground truth mule windows are specific periods within a 5-year history. Burst detection consistently identified wrong peak periods.
 
-### Models
-- **XGBoost**: 40% weight (AUC 0.8764)
-- **Random Forest**: 40% weight (AUC 0.8730)
-- **Logistic Regression**: 20% weight (AUC 0.8539)
+### Solution
+Submit the **full transaction history span** as the window.
 
-### Ensemble
-- Weighted average of 3 models
-- **Final AUC**: 0.8724
+**Mathematical basis:**
+```
+If ground_truth_window ⊆ account_transaction_history:
+    intersection = ground_truth_window_length (guaranteed)
+    IoU = ground_truth_length / our_span_length
+```
+
+### Results
+
+| Strategy | Temporal IoU | Coverage |
+|----------|-------------|----------|
+| No windows | 0.000 | 0/960 |
+| Burst detection | 0.226 | 347/960 |
+| Fixed calendar windows | 0.183 | 331/960 |
+| **Wide windows (final)** | **0.6181** | **743/960** |
+
+---
+
+## Red Herring Avoidance
+
+The private test set contains 7 adversarial account categories designed to mislead models.
+
+| Category | Pattern | Mitigation | Private Score |
+|----------|---------|-----------|--------------|
+| RH_1 | High transaction volume (businesses) | `pass_through_ratio` normalizes for volume | 0.9904 |
+| RH_2 | Seasonal spending spikes (festivals) | `structuring_ratio` distinguishes sub-threshold from round purchases | 0.9510 |
+| RH_3 | Large one-off transfers (property) | Co-occurrence: structuring + pass-through + concentration | 0.9040 |
+| RH_4 | Dormant account reactivation | `dormancy_before_burst` requires structuring co-signal | 0.9789 |
+| RH_5 | New account high activity (salary) | `account_age` × `diversity` interaction | 0.9522 |
+| RH_6 | Branch-level correlated patterns | Community cycling score distinguishes business vs mule clusters | 0.9968 |
+| RH_7 | Post mobile-update spikes (takeover) | Partial: `counterparty_diversity` | 0.1429 ⚠️ |
+
+**RH_7 acknowledged gap:** Requires device fingerprint + IP geolocation features (not available in dataset).
+
+---
+
+## Regulatory Compliance
+
+| Regulation | Implementation |
+|-----------|---------------|
+| PMLA 2002 | Mule account identification and suspicious transaction reporting |
+| RBI ₹10,000 threshold | `structuring_ratio` — detects ₹9,000–₹9,999 band transactions |
+| FATF Money Mule Guidance (2020) | `pass_through_ratio` — detects credit/debit balance near 1.0 |
+| RBI Cyber Fraud Circular (2023) | RH_7 distinction: account takeover vs deliberate mule recruitment |
+
+---
+
+## What Worked vs What Didn't
+
+### ✅ Worked
+| Approach | Impact |
+|----------|--------|
+| Wide window strategy | IoU 0.183 → 0.618 (+259%) |
+| 4-model ensemble | AUC 0.921 → 0.967 vs single XGBoost |
+| `structuring_ratio` feature | Single highest feature importance |
+| Graph community cycling score | RH_6: 0.95 → 0.997 |
+| Stratified train/val split | Eliminated 0.02 AUC leakage |
+| Isotonic calibration | F1 improvement without AUC loss |
+
+### ❌ Didn't Work
+| Approach | Why |
+|----------|-----|
+| SMOTE oversampling | Synthetic mules didn't match real patterns |
+| Platt calibration | Compressed probabilities into 0.0–0.55 |
+| Power stretching alone (p^0.5) | Degraded RH_2–RH_5 from 0.90+ to 0.39–0.47 |
+| Burst detection (rolling z-score) | Consistently found wrong peak period |
+| CatBoost / LightGBM | Longer training, no AUC benefit |
+
+---
+
+## Submission Evolution (27+ Iterations)
+
+| Version | AUC | F1 | IoU | Key Change |
+|---------|-----|----|-----|-----------|
+| V5 | 0.9643 | 0.5307 | 0.1854 | Initial baseline |
+| V15 | 0.9655 | 0.5549 | 0.2253 | Ensemble diversity |
+| V20 | 0.9742 | 0.5648 | 0.1813 | Best AUC at the time |
+| V21 | 0.9773 | 0.5879 | 0.1833 | Fast ensemble |
+| **V21 + Wide Windows** ⭐ | **0.9773** | **0.5879** | **0.6801** | **IoU breakthrough** |
+| V27 | 0.9761 | 0.5855 | 0.2177 | Slight regression |
+
+---
 
 ## File Structure
 
 ```
 .
-├── src/                          # Core implementation
-│   ├── data_loader.py
+├── v3/
+│   ├── generate_submission_v21_fast_advanced.py   # Main script (Stage 1)
+│   ├── generate_submission_v28_f1_optimized.py    # F1-optimized version
+│   └── ...
+├── src/
 │   ├── feature_engineering.py
 │   ├── ensemble_models.py
-│   ├── pipeline.py
+│   ├── graph_analysis.py
+│   ├── temporal_window_generator.py
 │   └── ...
-├── tests/                        # Unit tests
-├── output/                       # Generated outputs
-│   ├── submission_improved.csv   # Final predictions
-│   └── label_signals.csv         # Behavioral signals
-├── label_signal.py               # Label signal generator
-├── optimize_models.py            # Model optimization
-├── generate_improved_submission.py # Submission generator
-├── requirements.txt              # Dependencies
-├── PROJECT_SUMMARY.md            # Complete project documentation
-└── README.md                     # This file
+├── output/
+│   └── mega_transaction_features.csv              # Pre-extracted features
+├── output_v21_fast_advanced/
+│   ├── submission_v21_fast_advanced.csv           # Stage 1 output
+│   └── submission_v21_wide_windows.csv            # FINAL SUBMISSION ✅
+├── wide_window_attempt.py                         # Stage 2 (window optimization)
+├── f1_calibration_postprocessor.py                # F1 improvement script
+├── requirements.txt
+└── README.md
 ```
-
-## Documentation
-
-- **PROJECT_SUMMARY.md**: Complete project documentation including:
-  - Problem statement
-  - Solution architecture
-  - Implementation journey
-  - Debugging & issues resolved
-  - Final results
-  - Deployment guide
-
-## Performance Analysis
-
-### Overfitting Assessment
-- **XGBoost**: 10.1% AUC gap (moderate overfitting)
-- **Random Forest**: 11.2% AUC gap (moderate overfitting)
-- **Logistic Regression**: 2.0% AUC gap (no overfitting)
-- **Ensemble**: Mitigates individual model overfitting
-
-### Validation Performance
-- **Expected Test AUC**: 0.85-0.88
-- **Status**: ✓ Approved for deployment
-
-## Deployment
-
-### Prerequisites
-- Python 3.8+
-- 4GB RAM minimum
-- 500MB disk space
-
-### Production Deployment
-1. Download `output/submission_improved.csv`
-2. Upload to evaluation system
-3. Monitor test performance vs validation (0.8724)
-4. Alert if test AUC < 0.82
-
-### Monitoring
-- Track test set performance
-- Monitor for performance drift
-- Retrain quarterly with new data
-- Collect feedback on predictions
-
-## Future Improvements
-
-### Short-term
-- Monitor test performance
-- Analyze false positives/negatives
-- Implement early stopping
-
-### Medium-term
-- Reduce model complexity (regularization)
-- Increase Logistic Regression weight
-- Implement cross-validation monitoring
-
-### Long-term
-- Add transaction-level features
-- Incorporate customer demographics
-- Build feedback loop for continuous improvement
-
-## Dependencies
-
-See `requirements.txt` for full list:
-- pandas
-- numpy
-- scikit-learn
-- xgboost
-- imbalanced-learn
-
-## Testing
-
-```bash
-# Run all tests
-pytest tests/
-
-# Run specific test
-pytest tests/test_ensemble_models.py
-
-# Run with coverage
-pytest --cov=src tests/
-```
-
-## License
-
-Internal project - IIT Delhi
-
-## Contact
-
-For questions or issues, refer to PROJECT_SUMMARY.md for complete documentation.
 
 ---
 
-**Last Updated**: March 4, 2026  
-**Status**: ✓ Production Ready
+## Environment
+
+```
+Python 3.8+
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+xgboost>=1.5.0
+tensorflow>=2.8.0
+networkx>=2.6.0
+pyarrow>=6.0.0
+joblib>=1.1.0
+```
+
+---
+
+## Known Limitations & Future Work
+
+| Limitation | Current Score | Fix | Expected |
+|-----------|--------------|-----|---------|
+| RH_7 Account Takeover | 0.1429 | Device fingerprint + IP geolocation features | 0.85+ |
+| F1 Compression | 0.5090 | Isotonic regression calibration | 0.60+ |
+| Temporal Window Precision | 0.6181 | Supervised window labels | 0.75+ |
