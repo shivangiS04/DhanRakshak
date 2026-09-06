@@ -7,6 +7,7 @@ Better than V15 without slow models
 
 import argparse
 import json
+import joblib
 import logging
 import os
 import sys
@@ -294,14 +295,15 @@ def main(argv=None):
         X_tr_derived = create_derived_features(X_tr)
         X_te_derived = create_derived_features(X_te)
 
-        # Split train into train/val
+        # Split train into train/val (track account_ids for validation fold)
         skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         train_idx, val_idx = next(skf.split(X_tr_derived, y_train))
-        
+
         X_train_fold = X_tr_derived.iloc[train_idx]
         y_train_fold = y_train[train_idx]
         X_val_fold = X_tr_derived.iloc[val_idx]
         y_val_fold = y_train[val_idx]
+        val_account_ids = X_train_df['account_id'].iloc[val_idx].values
 
         # Train fast ensemble
         models_dict, weights, auc_scores = train_fast_ensemble(
@@ -377,6 +379,20 @@ def main(argv=None):
         with open(metrics_path, "w") as f:
             json.dump(metrics, f, indent=2)
         logger.info(f"Metrics saved: {metrics_path}")
+
+        # Save validation fold artifacts for red-herring evaluation
+        val_fold_artifacts = {
+            "models_dict": models_dict,
+            "weights": weights,
+            "X_val_fold": X_val_fold,
+            "y_val_fold": y_val_fold,
+            "val_account_ids": val_account_ids,
+        }
+        val_fold_path = output_dir / "val_fold_artifacts.joblib"
+        joblib.dump(val_fold_artifacts, val_fold_path)
+        logger.info(f"Validation fold artifacts saved: {val_fold_path}")
+        logger.info(f"  Validation fold size: {len(X_val_fold)} accounts")
+        logger.info(f"  Account IDs tracked: {len(val_account_ids)}")
 
         logger.info("")
         logger.info("=" * 80)
