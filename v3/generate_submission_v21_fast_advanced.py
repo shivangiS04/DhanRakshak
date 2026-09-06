@@ -384,6 +384,8 @@ def main(argv=None):
         val_fold_artifacts = {
             "models_dict": models_dict,
             "weights": weights,
+            "X_train_fold": X_train_fold,
+            "y_train_fold": y_train_fold,
             "X_val_fold": X_val_fold,
             "y_val_fold": y_val_fold,
             "val_account_ids": val_account_ids,
@@ -391,6 +393,7 @@ def main(argv=None):
         val_fold_path = output_dir / "val_fold_artifacts.joblib"
         joblib.dump(val_fold_artifacts, val_fold_path)
         logger.info(f"Validation fold artifacts saved: {val_fold_path}")
+        logger.info(f"  Training fold size: {len(X_train_fold)} accounts")
         logger.info(f"  Validation fold size: {len(X_val_fold)} accounts")
         logger.info(f"  Account IDs tracked: {len(val_account_ids)}")
 
