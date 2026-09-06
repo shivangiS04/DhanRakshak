@@ -1,0 +1,62 @@
+{
+  "experiment": "Stage 1 ensemble model training and evaluation — DhanRakshak ICAIF 2026",
+  "run_date": "2026-09-06",
+  "dataset": {
+    "source": "public RBIH-NFPC-Phase-2 Kaggle release",
+    "kaggle_handle": "abhyudayrbih/rbih-nfpc-phase-2",
+    "run_location": "Kaggle notebook environment",
+    "notes": "159K customers, ~400M transactions across batch_0 through batch_87, real accounts.parquet with verified schema"
+  },
+  "pipeline_version": "v21_fast_advanced",
+  "evaluation_split": "StratifiedKFold(n_splits=5, shuffle=True, random_state=42), fold 0 (val_idx held-out)",
+  "per_model_validation_auc": {
+    "xgb": 0.9118,
+    "et": 0.8994,
+    "gb": 0.9185,
+    "nn": 0.9110
+  },
+  "ensemble_validation_auc": 0.9203,
+  "ensemble_weights": {
+    "xgb": 0.250,
+    "et": 0.247,
+    "gb": 0.252,
+    "nn": 0.250
+  },
+  "weighting_method": "AUC-proportional: weight[model] = model_auc / sum(all_model_aucs)",
+  "ensemble_combination": "Probability-weighted average: ensemble_prob = sum(weight[model] * model.predict_proba(X)[:, 1] for model in models)",
+  "unresolved_discrepancies": [
+    {
+      "claim": "Paper claims ensemble validation AUC = 0.9773",
+      "measured": 0.9203,
+      "gap": "0.0570 (7.0 percentage points)",
+      "status": "hypothesis_unconfirmed",
+      "hypothesis": "0.9773 is a training-fold AUC, not held-out validation AUC",
+      "evidence_for_hypothesis": "Git history contains RESULTS_SUMMARY.txt (deleted at commit 8b08a86) reporting training AUC 0.9777 for a similarly-configured tree ensemble on this project; the v21 models use comparable hyperparameters (max_depth=8-16, n_estimators=400) to earlier iterations. Train-vs-validation AUC gap of ~7-10 points is typical for tree ensembles with this configuration on a 159K-account imbalanced dataset.",
+      "next_check": "Run `train_probs = predict_ensemble(models_dict, X_train_fold, weights); train_auc = roc_auc_score(y_train_fold, train_probs); print(f'Training-fold AUC: {train_auc:.4f}')` on Kaggle. If train_auc ≈ 0.97+, hypothesis is CONFIRMED; otherwise, discrepancy remains unexplained."
+    },
+    {
+      "claim": "Paper/README may claim per-model AUCs (e.g., 0.9061, 0.8993, 0.9080, 0.9112)",
+      "measured": [0.9118, 0.8994, 0.9185, 0.9110],
+      "status": "pending_check",
+      "reason": "No prior artifact in repo persisted per-model AUCs; the numbers now in verified_metrics.json are computed on real Kaggle data but exact claimed values (if any) cannot be verified against code."
+    },
+    {
+      "claim": "Red-herring evaluation categories may have ground-truth labels in train_labels.parquet or Kaggle dataset README",
+      "status": "pending_check",
+      "next_check": "On Kaggle: print(train_labels.columns.tolist()); check /kaggle/input/datasets/abhyudayrbih/rbih-nfpc-phase-2/README.md for any mention of red-herring categories or account-type labels."
+    }
+  ],
+  "code_provenance": [
+    "v3/generate_submission_v21_fast_advanced.py:307-314 — training and evaluation",
+    "v3/generate_submission_v21_fast_advanced.py:157-174 — ensemble combination logic (predict_ensemble)",
+    "v3/generate_submission_v21_fast_advanced.py:93, 105, 118, 142 — per-model AUC logging",
+    "v3/generate_submission_v21_fast_advanced.py:286 — ensemble AUC computation",
+    "v3/generate_submission_v21_fast_advanced.py:373-378 — structured metrics persistence (JSON output)"
+  ],
+  "notes": [
+    "These metrics represent the held-out validation fold of the first stratified split (fold 0 of 5). They are derived from running the v21 pipeline end-to-end on the real Kaggle dataset with no local data.",
+    "The wide validation-fold lift over the best single model (0.9203 vs. 0.9185 GB) is modest (~0.002), consistent with high correlation among tree-based ensemble members. Diversity is limited because XGBoost, ExtraTrees, and GradientBoosting all operate on the same feature set.",
+    "No calibration step or probability rescaling (e.g., [0.01, 0.99] bounds) was applied during this run; ensemble probabilities are raw unscaled outputs.",
+    "All hyperparameters and random states are controlled (random_state=42) to enable reproducibility."
+  ]
+}
