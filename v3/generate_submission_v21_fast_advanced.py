@@ -5,7 +5,10 @@ Fast advanced algorithms: XGBoost, ExtraTrees, Neural Network
 Better than V15 without slow models
 """
 
+import argparse
+import json
 import logging
+import os
 import sys
 import pandas as pd
 import numpy as np
@@ -147,8 +150,8 @@ def train_fast_ensemble(X_train, y_train, X_val, y_val):
     
     logger.info(f"Ensemble weights: " +
                 ", ".join([f"{k}={v:.3f}" for k, v in weights.items()]))
-    
-    return models, weights
+
+    return models, weights, auc_scores
 
 
 def predict_ensemble(models_dict, X, weights=None):
@@ -217,20 +220,46 @@ def generate_window(prob: float, features_row: dict) -> tuple:
     return start_str, end_str
 
 
-def main():
+def parse_args(argv=None):
+    """Parse command-line arguments"""
+    parser = argparse.ArgumentParser(
+        description="Generate submission v21 using fast advanced algorithms (XGBoost, ExtraTrees, GradientBoosting, NN)"
+    )
+    parser.add_argument(
+        "--data-root",
+        default=os.environ.get("DHANRAKSHAK_DATA_ROOT", "/Users/shivangisingh/Desktop/archive"),
+        help="Directory containing train_labels.parquet and test_accounts.parquet "
+             "(default: $DHANRAKSHAK_DATA_ROOT env var, or original hardcoded path)",
+    )
+    parser.add_argument(
+        "--features-path",
+        default="output/mega_transaction_features.csv",
+        help="Path to pre-extracted mega_transaction_features.csv (default: output/mega_transaction_features.csv)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="output_v21_fast_advanced",
+        help="Directory to write submission CSV and metrics JSON (default: output_v21_fast_advanced)",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+
     logger.info("=" * 80)
     logger.info("GENERATING SUBMISSION V21 — Fast Advanced Algorithms")
     logger.info("=" * 80)
 
     try:
         # Load features
-        features_path = Path('output/mega_transaction_features.csv')
+        features_path = Path(args.features_path)
         logger.info("Loading features...")
         features_df = pd.read_csv(features_path)
         logger.info(f"Loaded {len(features_df)} accounts")
 
         # Load labels / test list
-        data_root = Path('/Users/shivangisingh/Desktop/archive')
+        data_root = Path(args.data_root)
         train_labels = pd.read_parquet(data_root / 'train_labels.parquet')
         test_accounts = pd.read_parquet(data_root / 'test_accounts.parquet')
 
@@ -275,7 +304,7 @@ def main():
         y_val_fold = y_train[val_idx]
 
         # Train fast ensemble
-        models_dict, weights = train_fast_ensemble(
+        models_dict, weights, auc_scores = train_fast_ensemble(
             X_train_fold, y_train_fold,
             X_val_fold, y_val_fold
         )
@@ -332,10 +361,22 @@ def main():
         submission = optimizer.optimize_batch(submission)
 
         # Save
-        output_dir = Path('output_v21_fast_advanced')
+        output_dir = Path(args.output_dir)
         output_dir.mkdir(exist_ok=True)
         output_path = output_dir / 'submission_v21_fast_advanced.csv'
         submission.to_csv(output_path, index=False)
+
+        # Save metrics as JSON
+        metrics = {
+            "model_auc": {k: float(v) for k, v in auc_scores.items()},
+            "ensemble_val_auc": float(val_auc),
+            "ensemble_weights": {k: float(v) for k, v in weights.items()},
+            "run_timestamp": datetime.now().isoformat(),
+        }
+        metrics_path = output_dir / "metrics_v21_fast_advanced.json"
+        with open(metrics_path, "w") as f:
+            json.dump(metrics, f, indent=2)
+        logger.info(f"Metrics saved: {metrics_path}")
 
         logger.info("")
         logger.info("=" * 80)
@@ -355,4 +396,4 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:] if len(sys.argv) > 1 else None))

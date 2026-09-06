@@ -129,7 +129,7 @@ v3/generate_submission_v*.py
 
 # Experimental scripts
 hybrid_window.py
-wide_window_attempt.py
+!wide_window_attempt.py
 add_windows_to_v21.py
 add_windows_to_v21_v2.py
 *_test.py
