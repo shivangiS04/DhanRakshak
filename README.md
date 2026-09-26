@@ -161,11 +161,8 @@ DhanRakshak/
 │   ├── freeze_unfreeze_detector.py
 │   ├── red_herring_detector.py
 │   └── ...
-├── submission_code_final/                        ← subset of code as originally submitted
-├── submission_package/                           ← near-duplicate of src/ (competition archive)
 ├── experiments/                                  ← earlier iteration scripts
 ├── tests/                                        ← pytest unit tests
-├── docs/                                         ← audit and release reports
 ├── verified_metrics.json                         ← Kaggle reproduction run metrics
 ├── pyproject.toml
 └── requirements.txt
