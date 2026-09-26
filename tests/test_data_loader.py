@@ -97,7 +97,7 @@ class TestLazyTransactionLoader:
     @pytest.fixture
     def sample_transactions(self):
         """Create sample transaction data"""
-        dates = pd.date_range('2024-01-01', periods=1000, freq='H')
+        dates = pd.date_range('2024-01-01', periods=1000, freq='h')
         return pd.DataFrame({
             'transaction_id': [f'T{i}' for i in range(1000)],
             'account_id': [f'A{i % 10}' for i in range(1000)],

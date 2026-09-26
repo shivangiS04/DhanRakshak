@@ -21,7 +21,7 @@ class TestFeatureExtractionPipeline:
     @pytest.fixture
     def sample_data(self):
         """Create sample data for integration testing"""
-        dates = pd.date_range('2024-01-01', periods=500, freq='H')
+        dates = pd.date_range('2024-01-01', periods=500, freq='h')
         
         transactions = pd.DataFrame({
             'transaction_id': [f'T{i}' for i in range(500)],
@@ -66,7 +66,7 @@ class TestPatternDetectionPipeline:
     @pytest.fixture
     def sample_data(self):
         """Create sample data"""
-        dates = pd.date_range('2024-01-01', periods=500, freq='H')
+        dates = pd.date_range('2024-01-01', periods=500, freq='h')
         
         transactions = pd.DataFrame({
             'transaction_id': [f'T{i}' for i in range(500)],
@@ -113,7 +113,7 @@ class TestTemporalAnalysisPipeline:
     @pytest.fixture
     def sample_data(self):
         """Create sample data"""
-        dates = pd.date_range('2024-01-01', periods=500, freq='H')
+        dates = pd.date_range('2024-01-01', periods=500, freq='h')
         
         transactions = pd.DataFrame({
             'transaction_id': [f'T{i}' for i in range(500)],
@@ -152,7 +152,7 @@ class TestGraphAnalysisPipeline:
     @pytest.fixture
     def sample_transactions(self):
         """Create sample transaction data"""
-        dates = pd.date_range('2024-01-01', periods=200, freq='H')
+        dates = pd.date_range('2024-01-01', periods=200, freq='h')
         
         return pd.DataFrame({
             'transaction_id': [f'T{i}' for i in range(200)],
