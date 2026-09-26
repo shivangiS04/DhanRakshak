@@ -1,0 +1,307 @@
+# ============================================================================
+# PYTHON & ENVIRONMENT
+# ============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv/
+venv/
+ENV/
+env/
+.env
+.venv.local
+
+# ============================================================================
+# IDE & EDITOR
+# ============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.AppleDouble
+.LSOverride
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.settings/
+*.code-workspace
+.vim/
+.emacs.d/
+
+# ============================================================================
+# JUPYTER & NOTEBOOKS
+# ============================================================================
+.ipynb_checkpoints/
+*.ipynb
+.jupyter/
+.jupyterlab/
+
+# ============================================================================
+# DATA FILES (LARGE, SENSITIVE, TEMPORARY)
+# ============================================================================
+# Raw transaction data
+/data/raw/
+/data/transactions/
+*.parquet
+*.parquet.bak
+/archive/
+/transactions/
+
+# Processed/intermediate data
+/data/processed/
+/data/feature_cache/
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+
+# Feature files (large)
+mega_transaction_features.csv
+mega_transaction_features.csv.bak
+*_features.csv
+*_features.pkl
+
+# Submission outputs (keep only final)
+/output/*
+!/output/README.md
+# License-risk derived data (CC BY-NC-SA 4.0 source) — never commit
+output/label_signals.csv
+/output_v*/
+submission_*.csv
+!submission_v21_wide_windows.csv
+predictions_*.csv
+windows_*.csv
+
+# Logs & temporary files
+*.log
+*.log.*
+add_windows_*.log
+hybrid_window.log
+v22_direct_run.log
+*.tmp
+*.temp
+
+# ============================================================================
+# MODEL FILES & CHECKPOINTS
+# ============================================================================
+*.model
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+xgboost_model.pkl
+extratrees_model.pkl
+gradientboosting_model.pkl
+neural_network_model.h5
+ensemble_weights.pkl
+scaler_*.pkl
+
+# ============================================================================
+# EXPERIMENT & ITERATION FILES (KEEP ONLY FINAL)
+# ============================================================================
+# Intermediate submission versions
+v3/generate_submission_v*.py
+!v3/generate_submission_v21_fast_advanced.py
+!v3/generate_submission_v25_aggressive_threshold.py
+
+# Experimental scripts
+hybrid_window.py
+!wide_window_attempt.py
+add_windows_to_v21.py
+add_windows_to_v21_v2.py
+*_test.py
+*_experimental.py
+*_draft.py
+*_backup.py
+
+# ============================================================================
+# DOCUMENTATION (KEEP ONLY ESSENTIAL)
+# ============================================================================
+# Keep final reports, remove drafts
+DRAFT_*.md
+*_DRAFT.md
+*_WIP.md
+*_OLD.md
+NOTES.md
+SCRATCH.md
+TEMP_*.md
+
+# Keep only final architecture docs
+architecture_summary.md
+final_solution_report.md
+evaluation_criteria_coverage.md
+challenge_requirements_coverage.md
+
+# Remove intermediate docs
+COMPARISON_*.md
+IMPROVEMENTS_*.md
+IMPLEMENTATION_*.md
+READY_TO_*.md
+RUN_*.md
+
+# ============================================================================
+# REPORTS & OUTPUTS (KEEP ONLY FINAL)
+# ============================================================================
+REPORT.txt
+SUBMISSION_STRATEGY.txt
+SUBMISSION_SUMMARY.txt
+SUBMISSION_INDEX.md
+QUICK_START.md
+INDEX.md
+
+# Remove intermediate reports
+*_REPORT.txt
+*_SUMMARY.txt
+*_SUMMARY.md
+*_GUIDE.md
+VISUAL_*.md
+FLOWCHART_*.md
+HACKATHON_*.md
+
+# ============================================================================
+# SYSTEM & OS FILES
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.directory
+.AppleDouble
+.LSOverride
+*.swp
+*.swo
+*~
+.~*
+
+# ============================================================================
+# COVERAGE & TESTING
+# ============================================================================
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+.hypothesis/
+*.cover
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ============================================================================
+# GIT
+# ============================================================================
+.git/
+.gitattributes
+.gitmodules
+
+# ============================================================================
+# MISC TEMPORARY FILES
+# ============================================================================
+*.bak
+*.backup
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+.~*
+*.tmp
+*.temp
+*.cache
+.cache/
+*.lock
+
+# ============================================================================
+# EXCLUDED FROM PUBLIC REPO
+# ============================================================================
+# PDF report — not tracked; keep locally if needed
+*.pdf
+
+# History-rewrite scripts — private tooling
+scripts/
+
+# ============================================================================
+# SENSITIVE DATA (IF ANY)
+# ============================================================================
+*.key
+*.pem
+*.crt
+*.pfx
+secrets.json
+config.local.json
+.env.local
+.env.*.local
+
+# ============================================================================
+# COMPILED FILES
+# ============================================================================
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# ============================================================================
+# PACKAGE MANAGERS
+# ============================================================================
+package-lock.json
+yarn.lock
+Pipfile.lock
+poetry.lock
+
+# ============================================================================
+# DOCKER
+# ============================================================================
+.dockerignore
+docker-compose.override.yml
+
+# ============================================================================
+# CI/CD
+# ============================================================================
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# ============================================================================
+# KEEP THESE (ESSENTIAL FOR SUBMISSION)
+# ============================================================================
+# DO NOT IGNORE:
+# - submission_v21_wide_windows.csv (FINAL SUBMISSION)
+# - v3/generate_submission_v21_fast_advanced.py (FINAL CODE)
+# - final_solution_report.md (FINAL REPORT)
+# - evaluation_criteria_coverage.md (EVALUATION)
+# - architecture_summary.md (ARCHITECTURE)
+# - src/ (SOURCE CODE)
+# - requirements.txt (DEPENDENCIES)
+# - README.md (DOCUMENTATION)

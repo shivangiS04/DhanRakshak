@@ -1,0 +1,35 @@
+{
+  "description": "Reproducibility run — Stage 1 ensemble (v21_fast_advanced) on real Kaggle data",
+  "run_date": "2026-09-06",
+  "dataset": {
+    "source": "public RBIH-NFPC-Phase-2 Kaggle release",
+    "kaggle_handle": "abhyudayrbih/rbih-nfpc-phase-2",
+    "run_location": "Kaggle notebook environment",
+    "notes": "159K customers, ~400M transactions across batch_0 through batch_87"
+  },
+  "pipeline_version": "v21_fast_advanced",
+  "evaluation_split": "StratifiedKFold(n_splits=5, shuffle=True, random_state=42), fold 0 held-out",
+  "per_model_validation_auc": {
+    "xgb": 0.9118,
+    "et":  0.8994,
+    "gb":  0.9185,
+    "nn":  0.9110
+  },
+  "ensemble_validation_auc": 0.9203,
+  "ensemble_weights": {
+    "xgb": 0.250,
+    "et":  0.247,
+    "gb":  0.252,
+    "nn":  0.250
+  },
+  "notes": [
+    "Held-out fold AUC (0.9203) is lower than the competition leaderboard public score (0.9773). The gap is most likely a training-fold vs held-out difference — the 0.9773 figure in the README is from the original competition submission and may reflect a training-set AUC rather than held-out. The hypothesis is unconfirmed: rerunning with both train-fold and val-fold AUC logged would resolve it.",
+    "No calibration or probability rescaling was applied in this run; probabilities are raw ensemble outputs.",
+    "Per-model AUCs here (0.9118 / 0.8994 / 0.9185 / 0.9110) differ from earlier figures in the README (0.9061 / 0.8993 / 0.9080 / 0.9112), which came from an undocumented earlier run. These are the verifiable numbers.",
+    "All random states are controlled (random_state=42)."
+  ],
+  "code_provenance": [
+    "v3/generate_submission_v21_fast_advanced.py — training loop and ensemble combination",
+    "v3/generate_submission_v21_fast_advanced.py — per-model AUC logging and structured JSON output"
+  ]
+}
